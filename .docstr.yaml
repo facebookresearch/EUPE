@@ -1,0 +1,6 @@
+paths:
+    - eupe
+exclude: eupe/tests
+skip_init: True
+skip_private: True
+fail_under: 0

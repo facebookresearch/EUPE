@@ -1,0 +1,21 @@
+build/
+dist/
+*.egg-info/
+**/__pycache__/
+
+**/.ipynb_checkpoints
+**/.ipynb_checkpoints/**
+
+**/notebooks
+**/checkpoints
+**/datasets
+**/outputs
+
+# Ignore shell scripts
+*.sh
+
+# Ignore swap files
+*.swp
+
+# Ignore vscode directory
+.vscode/
