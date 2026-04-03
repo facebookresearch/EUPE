@@ -120,8 +120,9 @@ def slide_inference(
     assert batch_size == 1  # As of now, the code assumes that a single image is passed at a time at inference time
     h_grids = max(h_img - h_crop + h_stride - 1, 0) // h_stride + 1
     w_grids = max(w_img - w_crop + w_stride - 1, 0) // w_stride + 1
-    preds = inputs.new_zeros((1, n_output_channels, h_img, w_img)).cpu()
-    count_mat = inputs.new_zeros((1, 1, h_img, w_img)).to(torch.int8).cpu()
+    # Keep the sliding-window accumulator on device to avoid per-crop CPU transfers.
+    preds = inputs.new_zeros((1, n_output_channels, h_img, w_img))
+    count_mat = inputs.new_zeros((1, 1, h_img, w_img), dtype=torch.int8)
     for h_idx in range(h_grids):
         for w_idx in range(w_grids):
             y1 = h_idx * h_stride
@@ -138,12 +139,12 @@ def slide_inference(
                 mask_pred = mask_pred.sigmoid()
                 crop_pred = torch.einsum("bqc,bqhw->bchw", mask_cls.to(torch.bfloat16), mask_pred.to(torch.bfloat16))
                 del mask_cls, mask_pred
-            preds += F.pad(crop_pred, (int(x1), int(preds.shape[-1] - x2), int(y1), int(preds.shape[-2] - y2))).cpu()
+            preds[:, :, y1:y2, x1:x2] += crop_pred
             count_mat[:, :, y1:y2, x1:x2] += 1
             del crop_img, crop_pred
     # Optional buffer to ensure each gpu does the same number of operations for sharded models
     for _ in range(h_grids * w_grids, num_max_forward):
         dummy_input = inputs.new_zeros((1, C, h_crop, w_crop))
         _ = segmentation_model.predict(dummy_input, rescale_to=dummy_input.shape[2:])
-    assert (count_mat == 0).sum() == 0
-    return preds / count_mat
+    assert ((count_mat == 0).sum() == 0).item()
+    return preds / count_mat.to(dtype=preds.dtype)
