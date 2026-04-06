@@ -8,7 +8,6 @@ dist/
 
 **/notebooks
 **/checkpoints
-**/datasets
 **/outputs
 
 # Ignore shell scripts
