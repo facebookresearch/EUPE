@@ -48,7 +48,7 @@ def evaluate_segmentation_model(
     for batch_img, (_, gt) in metric_logger.log_every(test_dataloader, 10, header="Validation: "):
         batch_img = [img.to(device).to(dtype=autocast_dtype) for img in batch_img]
         gt = gt.to(device)[0]
-        aggregated_preds = torch.zeros(1, num_classes, gt.shape[-2], gt.shape[-1])
+        aggregated_preds = torch.zeros(1, num_classes, gt.shape[-2], gt.shape[-1], device=gt.device)
         for img_idx, img in enumerate(batch_img):
             aggregated_preds += make_inference(
                 img,
@@ -62,7 +62,7 @@ def evaluate_segmentation_model(
                 apply_horizontal_flip=(img_idx and img_idx >= len(batch_img) / 2),
                 output_activation=partial(torch.nn.functional.softmax, dim=1),
             )
-        aggregated_preds = (aggregated_preds / len(batch_img)).argmax(dim=1, keepdim=True).to(device)
+        aggregated_preds = (aggregated_preds / len(batch_img)).argmax(dim=1, keepdim=True)
         intersect_and_union = calculate_intersect_and_union(
             aggregated_preds[0],
             gt,
